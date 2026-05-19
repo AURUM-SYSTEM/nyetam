@@ -21,6 +21,81 @@ function getPlatform(): { os: "ios" | "android" | "other"; browser: "safari" | "
 
 type SR = any;
 
+function PermissionDeniedBanner({ onRetry }: { onRetry: () => void }) {
+  const { os, browser } = getPlatform();
+
+  let title = "Accès au micro refusé";
+  let steps: string[] = [];
+  let helpLabel = "";
+  let helpUrl = "";
+
+  if (os === "ios" || browser === "safari") {
+    steps = [
+      "Ouvrez l'app Réglages sur votre iPhone/iPad.",
+      "Descendez et touchez Safari.",
+      "Touchez Micro (ou Appareil photo & micro).",
+      "Sélectionnez Autoriser pour ce site.",
+      "Revenez dans Safari et rechargez cette page.",
+    ];
+    helpLabel = "Aide Apple — gérer les permissions";
+    helpUrl = "https://support.apple.com/fr-fr/guide/iphone/iph145586c2e/ios";
+  } else if (os === "android" || browser === "chrome") {
+    steps = [
+      "Dans Chrome, touchez l'icône cadenas (ou ⋮) dans la barre d'adresse.",
+      "Touchez Autorisations (ou Paramètres du site).",
+      "Touchez Microphone.",
+      "Choisissez Autoriser.",
+      "Rechargez cette page.",
+    ];
+    helpLabel = "Aide Google Chrome — permissions de site";
+    helpUrl = "https://support.google.com/chrome/answer/2693767?hl=fr";
+  } else {
+    steps = [
+      "Ouvrez les réglages de votre navigateur.",
+      "Recherchez la section Permissions / Confidentialité.",
+      "Autorisez le microphone pour ce site.",
+      "Rechargez cette page.",
+    ];
+    helpLabel = "Aide générale — permissions navigateur";
+    helpUrl = "https://support.google.com/chrome/answer/2693767?hl=fr";
+  }
+
+  return (
+    <div className="mt-6 flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+      <MicOff className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+      <div className="flex-1">
+        <p className="font-medium">{title}</p>
+        <p className="mt-1 text-muted-foreground">
+          Pour enregistrer, autorisez le micro&nbsp;:
+        </p>
+        <ol className="mt-2 list-decimal pl-5 text-muted-foreground space-y-0.5">
+          {steps.map((s, i) => (
+            <li key={i}>{s}</li>
+          ))}
+        </ol>
+        <a
+          href={helpUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-1 text-xs text-gold hover:underline"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          {helpLabel}
+        </a>
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={onRetry}
+            className="rounded-lg btn-gold px-4 py-2 text-xs"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function getSR(): SR | null {
   if (typeof window === "undefined") return null;
   const w = window as any;
