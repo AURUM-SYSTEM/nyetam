@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Mic, Square, Loader2, Type } from "lucide-react";
+import { ArrowLeft, Mic, Square, Loader2, Type, MicOff, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateDocument } from "@/lib/aurum.functions";
@@ -26,6 +26,8 @@ function RecordPage() {
   const generate = useServerFn(generateDocument);
 
   const [supported, setSupported] = useState(true);
+  const [secureOk, setSecureOk] = useState(true);
+  const [permission, setPermission] = useState<"unknown" | "prompt" | "granted" | "denied">("unknown");
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [transcript, setTranscript] = useState("");
@@ -40,15 +42,60 @@ function RecordPage() {
   useEffect(() => {
     const SR = getSR();
     if (!SR) setSupported(false);
+    if (typeof window !== "undefined") {
+      const secure = window.isSecureContext || location.hostname === "localhost";
+      setSecureOk(secure);
+      const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+      if (!hasMedia) setSupported(false);
+      const perms = (navigator as any).permissions;
+      if (perms?.query) {
+        perms.query({ name: "microphone" as PermissionName })
+          .then((status: any) => {
+            setPermission(status.state);
+            status.onchange = () => setPermission(status.state);
+          })
+          .catch(() => {});
+      }
+    }
     return () => {
       try { recRef.current?.stop(); } catch {}
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  function start() {
+  async function ensureMicAccess(): Promise<boolean> {
+    if (!secureOk) {
+      toast.error("Le micro nécessite HTTPS. Ouvrez l'app via une URL sécurisée.");
+      return false;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Votre navigateur ne donne pas accès au micro.");
+      return false;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      setPermission("granted");
+      return true;
+    } catch (err: any) {
+      const name = err?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setPermission("denied");
+        toast.error("Accès micro refusé. Activez-le dans les réglages du navigateur.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        toast.error("Aucun micro détecté sur cet appareil.");
+      } else {
+        toast.error("Micro indisponible : " + (err?.message || name));
+      }
+      return false;
+    }
+  }
+
+  async function start() {
     const SR = getSR();
     if (!SR) { setSupported(false); return; }
+    const ok = await ensureMicAccess();
+    if (!ok) return;
     const rec = new SR();
     rec.lang = "fr-FR";
     rec.continuous = true;
@@ -64,7 +111,14 @@ function RecordPage() {
       setPartial(interim);
     };
     rec.onerror = (e: any) => {
-      if (e.error === "no-speech") return;
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        setPermission("denied");
+        setRecording(false);
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        toast.error("Accès micro refusé. Autorisez le micro dans les réglages du navigateur.");
+        return;
+      }
       toast.error("Erreur micro: " + e.error);
     };
     rec.onend = () => {
@@ -158,6 +212,39 @@ function RecordPage() {
       {!supported && !manual && (
         <div className="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
           Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez la saisie manuelle ci-dessous, ou ouvrez l'application dans Chrome/Safari.
+        </div>
+      )}
+
+      {!secureOk && !manual && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <div>
+            <p className="font-medium">Connexion non sécurisée</p>
+            <p className="mt-1 text-muted-foreground">Le micro nécessite HTTPS. Ouvrez l'application via une URL sécurisée (https://) pour activer l'enregistrement.</p>
+          </div>
+        </div>
+      )}
+
+      {permission === "denied" && !manual && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <MicOff className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <div>
+            <p className="font-medium">Accès au micro refusé</p>
+            <p className="mt-1 text-muted-foreground">
+              Pour enregistrer, autorisez le micro&nbsp;:
+            </p>
+            <ul className="mt-2 list-disc pl-5 text-muted-foreground space-y-0.5">
+              <li><span className="text-foreground">iPhone (Safari)</span> : Réglages → Safari → Micro → Autoriser.</li>
+              <li><span className="text-foreground">Android (Chrome)</span> : icône cadenas dans la barre d'adresse → Autorisations → Micro.</li>
+              <li>Puis rechargez la page.</li>
+            </ul>
+            <button
+              onClick={() => { setPermission("unknown"); start(); }}
+              className="mt-3 rounded-lg btn-gold px-4 py-2 text-xs"
+            >
+              Réessayer
+            </button>
+          </div>
         </div>
       )}
 
