@@ -27,6 +27,11 @@ function getSR(): SR | null {
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
+export const Route = createFileRoute("/record/$type")({
+  component: RecordPage,
+  head: () => ({ meta: [{ title: "Enregistrement — AURUM" }] }),
+});
+
 function RecordPage() {
   const { type } = useParams({ from: "/record/$type" });
   const docType = (type === "pv" ? "pv" : "rapport") as "rapport" | "pv";
@@ -234,26 +239,7 @@ function RecordPage() {
       )}
 
       {permission === "denied" && !manual && (
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
-          <MicOff className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-          <div>
-            <p className="font-medium">Accès au micro refusé</p>
-            <p className="mt-1 text-muted-foreground">
-              Pour enregistrer, autorisez le micro&nbsp;:
-            </p>
-            <ul className="mt-2 list-disc pl-5 text-muted-foreground space-y-0.5">
-              <li><span className="text-foreground">iPhone (Safari)</span> : Réglages → Safari → Micro → Autoriser.</li>
-              <li><span className="text-foreground">Android (Chrome)</span> : icône cadenas dans la barre d'adresse → Autorisations → Micro.</li>
-              <li>Puis rechargez la page.</li>
-            </ul>
-            <button
-              onClick={() => { setPermission("unknown"); start(); }}
-              className="mt-3 rounded-lg btn-gold px-4 py-2 text-xs"
-            >
-              Réessayer
-            </button>
-          </div>
-        </div>
+        <PermissionDeniedBanner onRetry={() => { setPermission("unknown"); start(); }} />
       )}
 
       {!manual ? (
