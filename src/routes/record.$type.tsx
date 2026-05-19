@@ -111,7 +111,14 @@ function RecordPage() {
       setPartial(interim);
     };
     rec.onerror = (e: any) => {
-      if (e.error === "no-speech") return;
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        setPermission("denied");
+        setRecording(false);
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        toast.error("Accès micro refusé. Autorisez le micro dans les réglages du navigateur.");
+        return;
+      }
       toast.error("Erreur micro: " + e.error);
     };
     rec.onend = () => {
