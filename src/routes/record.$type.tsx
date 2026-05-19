@@ -26,6 +26,8 @@ function RecordPage() {
   const generate = useServerFn(generateDocument);
 
   const [supported, setSupported] = useState(true);
+  const [secureOk, setSecureOk] = useState(true);
+  const [permission, setPermission] = useState<"unknown" | "prompt" | "granted" | "denied">("unknown");
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [transcript, setTranscript] = useState("");
