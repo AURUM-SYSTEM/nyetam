@@ -1,15 +1,23 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Mic, Square, Loader2, Type, MicOff, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Mic, Square, Loader2, Type, MicOff, ShieldAlert, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateDocument } from "@/lib/aurum.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-export const Route = createFileRoute("/record/$type")({
-  component: RecordPage,
-  head: () => ({ meta: [{ title: "Enregistrement — AURUM" }] }),
-});
+function getPlatform(): { os: "ios" | "android" | "other"; browser: "safari" | "chrome" | "other" } {
+  if (typeof navigator === "undefined") return { os: "other", browser: "other" };
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+  const isSafari = /safari/.test(ua) && !/chrome|chromium|crios/.test(ua);
+  const isChrome = /chrome|chromium|crios/.test(ua);
+  return {
+    os: isIOS ? "ios" : isAndroid ? "android" : "other",
+    browser: isSafari ? "safari" : isChrome ? "chrome" : "other",
+  };
+}
 
 type SR = any;
 
