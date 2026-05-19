@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Mic, Square, Loader2, Type } from "lucide-react";
+import { ArrowLeft, Mic, Square, Loader2, Type, MicOff, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateDocument } from "@/lib/aurum.functions";
