@@ -79,7 +79,7 @@ Chaque section doit faire au moins 2 phrases. Pas de markdown, pas de **gras**, 
 
 RETRANSCRIPTION :
 """
-${data.transcript}
+${cleanedTranscript}
 """`;
 
     const content = await callGateway(
