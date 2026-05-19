@@ -42,15 +42,60 @@ function RecordPage() {
   useEffect(() => {
     const SR = getSR();
     if (!SR) setSupported(false);
+    if (typeof window !== "undefined") {
+      const secure = window.isSecureContext || location.hostname === "localhost";
+      setSecureOk(secure);
+      const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+      if (!hasMedia) setSupported(false);
+      const perms = (navigator as any).permissions;
+      if (perms?.query) {
+        perms.query({ name: "microphone" as PermissionName })
+          .then((status: any) => {
+            setPermission(status.state);
+            status.onchange = () => setPermission(status.state);
+          })
+          .catch(() => {});
+      }
+    }
     return () => {
       try { recRef.current?.stop(); } catch {}
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  function start() {
+  async function ensureMicAccess(): Promise<boolean> {
+    if (!secureOk) {
+      toast.error("Le micro nécessite HTTPS. Ouvrez l'app via une URL sécurisée.");
+      return false;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Votre navigateur ne donne pas accès au micro.");
+      return false;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      setPermission("granted");
+      return true;
+    } catch (err: any) {
+      const name = err?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setPermission("denied");
+        toast.error("Accès micro refusé. Activez-le dans les réglages du navigateur.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        toast.error("Aucun micro détecté sur cet appareil.");
+      } else {
+        toast.error("Micro indisponible : " + (err?.message || name));
+      }
+      return false;
+    }
+  }
+
+  async function start() {
     const SR = getSR();
     if (!SR) { setSupported(false); return; }
+    const ok = await ensureMicAccess();
+    if (!ok) return;
     const rec = new SR();
     rec.lang = "fr-FR";
     rec.continuous = true;
