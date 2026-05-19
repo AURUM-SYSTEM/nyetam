@@ -104,6 +104,7 @@ ${cleanedTranscript}
       faits: String(parsed.faits ?? ""),
       declarations: String(parsed.declarations ?? ""),
       conclusion: String(parsed.conclusion ?? ""),
+      cleanedTranscript,
     };
   });
 
