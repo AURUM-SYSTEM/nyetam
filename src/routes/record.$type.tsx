@@ -245,7 +245,7 @@ function RecordPage() {
         .insert({
           type: docType,
           title: result.title,
-          transcript: finalText,
+          transcript: result.cleanedTranscript ?? finalText,
           introduction: result.introduction,
           faits: result.faits,
           declarations: result.declarations,

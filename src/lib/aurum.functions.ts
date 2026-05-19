@@ -37,11 +37,31 @@ async function callGateway(messages: Array<{ role: string; content: string }>, j
   return data.choices?.[0]?.message?.content ?? "";
 }
 
+async function cleanRawTranscript(raw: string): Promise<string> {
+  const cleaned = await callGateway([
+    {
+      role: "system",
+      content:
+        "Tu nettoies des transcriptions audio brutes en français. Règles STRICTES : supprime les répétitions et hésitations (euh, ben, du coup, voilà, etc.), corrige les phrases cassées ou inachevées, reformule proprement dans un style professionnel et formel, mais GARDE rigoureusement le sens original — n'invente AUCUNE information, ne résume pas, ne raccourcis pas le contenu factuel. Renvoie UNIQUEMENT le texte nettoyé, sans préambule, sans guillemets, sans markdown.",
+    },
+    { role: "user", content: raw },
+  ]);
+  const out = cleaned.trim();
+  return out.length > 0 ? out : raw;
+}
+
+export const cleanTranscript = createServerFn({ method: "POST" })
+  .inputValidator((d: { text: string }) =>
+    z.object({ text: z.string().min(1).max(50000) }).parse(d),
+  )
+  .handler(async ({ data }) => ({ text: await cleanRawTranscript(data.text) }));
+
 export const generateDocument = createServerFn({ method: "POST" })
   .inputValidator((d: { transcript: string; type: "rapport" | "pv" }) =>
     z.object({ transcript: z.string().min(1).max(50000), type: z.enum(["rapport", "pv"]) }).parse(d),
   )
   .handler(async ({ data }) => {
+    const cleanedTranscript = await cleanRawTranscript(data.transcript);
     const typeLabel = data.type === "rapport" ? "RAPPORT" : "PROCÈS-VERBAL";
     const system = `Tu es un assistant juridique et administratif spécialisé dans la rédaction de ${typeLabel}s à partir de retranscriptions audio terrain. Tu rédiges en français formel, précis, factuel. Tu structures rigoureusement le contenu en quatre sections. Réponds STRICTEMENT en JSON valide.`;
     const user = `Voici la retranscription brute d'un enregistrement terrain. Génère un ${typeLabel} structuré.
@@ -59,7 +79,7 @@ Chaque section doit faire au moins 2 phrases. Pas de markdown, pas de **gras**, 
 
 RETRANSCRIPTION :
 """
-${data.transcript}
+${cleanedTranscript}
 """`;
 
     const content = await callGateway(
@@ -84,6 +104,7 @@ ${data.transcript}
       faits: String(parsed.faits ?? ""),
       declarations: String(parsed.declarations ?? ""),
       conclusion: String(parsed.conclusion ?? ""),
+      cleanedTranscript,
     };
   });
 
