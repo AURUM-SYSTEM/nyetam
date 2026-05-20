@@ -27,6 +27,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const [docs, setDocs] = useState<DocRow[] | null>(null);
   const navigate = useNavigate();
+  const online = useOnline();
 
   async function load() {
     const { data, error } = await supabase
