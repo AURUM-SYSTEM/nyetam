@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Plus, Mic, Trash2, ChevronRight } from "lucide-react";
+import { FileText, Plus, Mic, Trash2, ChevronRight, CloudOff } from "lucide-react";
 import { toast } from "sonner";
+import { PendingQueue } from "@/components/PendingQueue";
+import { useOnline } from "@/hooks/use-online";
 
 type DocRow = {
   id: string;
@@ -25,6 +27,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const [docs, setDocs] = useState<DocRow[] | null>(null);
   const navigate = useNavigate();
+  const online = useOnline();
 
   async function load() {
     const { data, error } = await supabase
@@ -56,6 +59,18 @@ function HomePage() {
         </p>
       </header>
 
+      {!online && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+          <CloudOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+          <div>
+            <p className="font-medium text-amber-300">Mode hors ligne activé</p>
+            <p className="mt-1 text-muted-foreground">Vos données seront synchronisées automatiquement dès le retour de la connexion.</p>
+          </div>
+        </div>
+      )}
+
+
+
       <button
         onClick={() => navigate({ to: "/new" })}
         className="group relative w-full overflow-hidden rounded-2xl btn-gold px-6 py-5 text-left"
@@ -71,9 +86,12 @@ function HomePage() {
         </div>
       </button>
 
+      <PendingQueue />
+
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg">Documents récents</h2>
+
           {docs && <span className="text-xs text-muted-foreground">{docs.length}</span>}
         </div>
 

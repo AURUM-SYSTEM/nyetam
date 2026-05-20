@@ -1,0 +1,157 @@
+import { openDB, type IDBPDatabase } from "idb";
+
+const DB_NAME = "aurum-offline";
+const DB_VERSION = 1;
+
+export type QueueStatus =
+  | "pending"
+  | "uploading"
+  | "transcribing"
+  | "generating"
+  | "synced"
+  | "error";
+
+export type AudioRecord = {
+  id: string;
+  blob: Blob;
+  mimeType: string;
+  durationMs: number;
+  createdAt: number;
+};
+
+export type QueueItem = {
+  id: string;
+  type: "rapport" | "pv";
+  audioId?: string;
+  transcript?: string;
+  status: QueueStatus;
+  remoteDocId?: string;
+  errorMsg?: string;
+  title?: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+let _db: Promise<IDBPDatabase> | null = null;
+
+function getDB() {
+  if (typeof window === "undefined") {
+    return Promise.reject(new Error("IndexedDB indisponible côté serveur"));
+  }
+  if (!_db) {
+    _db = openDB(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains("audios")) {
+          db.createObjectStore("audios", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("queue")) {
+          const s = db.createObjectStore("queue", { keyPath: "id" });
+          s.createIndex("status", "status");
+          s.createIndex("createdAt", "createdAt");
+        }
+      },
+    });
+  }
+  return _db;
+}
+
+function rid() {
+  return (
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2, 10)
+  );
+}
+
+export async function saveAudio(blob: Blob, mimeType: string, durationMs: number) {
+  const db = await getDB();
+  const rec: AudioRecord = { id: rid(), blob, mimeType, durationMs, createdAt: Date.now() };
+  await db.put("audios", rec);
+  return rec.id;
+}
+
+export async function getAudio(id: string): Promise<AudioRecord | undefined> {
+  const db = await getDB();
+  return db.get("audios", id);
+}
+
+export async function deleteAudio(id: string) {
+  const db = await getDB();
+  await db.delete("audios", id);
+}
+
+export async function enqueue(
+  item: Omit<QueueItem, "id" | "status" | "createdAt" | "updatedAt"> & {
+    status?: QueueStatus;
+  },
+): Promise<QueueItem> {
+  const db = await getDB();
+  const now = Date.now();
+  const full: QueueItem = {
+    id: rid(),
+    status: item.status ?? "pending",
+    createdAt: now,
+    updatedAt: now,
+    ...item,
+  };
+  await db.put("queue", full);
+  notify();
+  return full;
+}
+
+export async function updateQueueItem(id: string, patch: Partial<QueueItem>) {
+  const db = await getDB();
+  const cur = await db.get("queue", id);
+  if (!cur) return;
+  const next = { ...cur, ...patch, updatedAt: Date.now() };
+  await db.put("queue", next);
+  notify();
+  return next as QueueItem;
+}
+
+export async function deleteQueueItem(id: string) {
+  const db = await getDB();
+  const item = (await db.get("queue", id)) as QueueItem | undefined;
+  await db.delete("queue", id);
+  if (item?.audioId) {
+    try { await db.delete("audios", item.audioId); } catch {}
+  }
+  notify();
+}
+
+export async function listQueue(): Promise<QueueItem[]> {
+  const db = await getDB();
+  const all = (await db.getAll("queue")) as QueueItem[];
+  return all.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function listPending(): Promise<QueueItem[]> {
+  const all = await listQueue();
+  return all.filter(i => i.status !== "synced");
+}
+
+// --- pub/sub ---
+type Listener = () => void;
+const listeners = new Set<Listener>();
+function notify() {
+  listeners.forEach(l => {
+    try { l(); } catch {}
+  });
+}
+export function subscribeQueue(l: Listener) {
+  listeners.add(l);
+  return () => { listeners.delete(l); };
+}
+
+export async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buf);
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(
+      null,
+      Array.from(bytes.subarray(i, i + chunk)) as any,
+    );
+  }
+  return btoa(binary);
+}
