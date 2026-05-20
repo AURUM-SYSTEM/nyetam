@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Plus, Mic, Trash2, ChevronRight } from "lucide-react";
+import { FileText, Plus, Mic, Trash2, ChevronRight, CloudOff } from "lucide-react";
 import { toast } from "sonner";
+import { PendingQueue } from "@/components/PendingQueue";
+import { useOnline } from "@/hooks/use-online";
 
 type DocRow = {
   id: string;

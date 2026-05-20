@@ -8,6 +8,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { SyncStatus } from "@/components/SyncStatus";
+import { useSyncEngine } from "@/hooks/use-sync-engine";
 
 import appCss from "../styles.css?url";
 
@@ -64,7 +66,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.json" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -86,9 +91,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useSyncEngine();
   return (
     <QueryClientProvider client={queryClient}>
       <div className="mx-auto max-w-xl min-h-screen">
+        <div className="fixed top-3 right-3 z-50">
+          <SyncStatus />
+        </div>
         <Outlet />
       </div>
       <Toaster theme="dark" position="top-center" />
