@@ -86,9 +86,12 @@ function HomePage() {
         </div>
       </button>
 
+      <PendingQueue />
+
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg">Documents récents</h2>
+
           {docs && <span className="text-xs text-muted-foreground">{docs.length}</span>}
         </div>
 
