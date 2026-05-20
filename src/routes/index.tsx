@@ -59,6 +59,18 @@ function HomePage() {
         </p>
       </header>
 
+      {!online && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+          <CloudOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+          <div>
+            <p className="font-medium text-amber-300">Mode hors ligne activé</p>
+            <p className="mt-1 text-muted-foreground">Vos données seront synchronisées automatiquement dès le retour de la connexion.</p>
+          </div>
+        </div>
+      )}
+
+
+
       <button
         onClick={() => navigate({ to: "/new" })}
         className="group relative w-full overflow-hidden rounded-2xl btn-gold px-6 py-5 text-left"
