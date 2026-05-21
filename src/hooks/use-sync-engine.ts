@@ -24,6 +24,7 @@ export function useSyncEngine() {
     async function processOne(item: QueueItem) {
       try {
         let transcript = item.transcript ?? "";
+        const lang = item.meta?.lang ?? "fr";
 
         if (item.audioId && !transcript) {
           await updateQueueItem(item.id, { status: "transcribing" });
@@ -31,7 +32,7 @@ export function useSyncEngine() {
           if (!audio) throw new Error("Audio local introuvable");
           const audioBase64 = await blobToBase64(audio.blob);
           const t = await transcribe({
-            data: { audioBase64, mimeType: audio.mimeType },
+            data: { audioBase64, mimeType: audio.mimeType, lang },
           });
           transcript = t.text;
           if (!transcript.trim()) throw new Error("Transcription vide");
@@ -42,7 +43,7 @@ export function useSyncEngine() {
 
         await updateQueueItem(item.id, { status: "generating" });
         const result = await generate({
-          data: { transcript, type: item.type },
+          data: { transcript, type: item.type, lang },
         });
 
         const { data, error } = await supabase
@@ -54,8 +55,16 @@ export function useSyncEngine() {
             introduction: result.introduction,
             faits: result.faits,
             declarations: result.declarations,
+            observations: result.observations ?? "",
             conclusion: result.conclusion,
             status: "ready",
+            agent_name: item.meta?.agentName ?? "",
+            location: item.meta?.location ?? "",
+            reference: item.meta?.reference ?? "",
+            signature_name: item.meta?.signatureName ?? item.meta?.agentName ?? "",
+            doc_date: item.meta?.docDate ?? null,
+            doc_time: item.meta?.docTime ?? null,
+            lang,
           })
           .select("id")
           .single();
@@ -102,7 +111,6 @@ export function useSyncEngine() {
     window.addEventListener("online", onOnline);
     const interval = setInterval(() => { void runPass(); }, 30000);
     const unsub = subscribeQueue(() => { void runPass(); });
-    // first pass
     void runPass();
 
     return () => {
