@@ -1,7 +1,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 
 const DB_NAME = "aurum-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export type QueueStatus =
   | "pending"
@@ -19,6 +19,16 @@ export type AudioRecord = {
   createdAt: number;
 };
 
+export type QueueMeta = {
+  agentName?: string;
+  location?: string;
+  reference?: string;
+  docDate?: string;
+  docTime?: string;
+  signatureName?: string;
+  lang?: "fr" | "en";
+};
+
 export type QueueItem = {
   id: string;
   type: "rapport" | "pv";
@@ -28,6 +38,7 @@ export type QueueItem = {
   remoteDocId?: string;
   errorMsg?: string;
   title?: string;
+  meta?: QueueMeta;
   createdAt: number;
   updatedAt: number;
 };
@@ -129,7 +140,6 @@ export async function listPending(): Promise<QueueItem[]> {
   return all.filter(i => i.status !== "synced");
 }
 
-// --- pub/sub ---
 type Listener = () => void;
 const listeners = new Set<Listener>();
 function notify() {

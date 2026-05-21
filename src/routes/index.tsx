@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Plus, Mic, Trash2, ChevronRight, CloudOff } from "lucide-react";
+import { FileText, Plus, Mic, Trash2, ChevronRight, CloudOff, Settings, Info, User } from "lucide-react";
 import { toast } from "sonner";
 import { PendingQueue } from "@/components/PendingQueue";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useOnline } from "@/hooks/use-online";
+import { useI18n } from "@/i18n";
 
 type DocRow = {
   id: string;
@@ -12,6 +14,7 @@ type DocRow = {
   title: string;
   status: string;
   created_at: string;
+  reference: string | null;
 };
 
 export const Route = createFileRoute("/")({
@@ -28,13 +31,14 @@ function HomePage() {
   const [docs, setDocs] = useState<DocRow[] | null>(null);
   const navigate = useNavigate();
   const online = useOnline();
+  const { t, lang } = useI18n();
 
   async function load() {
     const { data, error } = await supabase
       .from("documents")
-      .select("id,type,title,status,created_at")
+      .select("id,type,title,status,created_at,reference")
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(50);
     if (error) { toast.error(error.message); return; }
     setDocs(data as DocRow[]);
   }
@@ -44,32 +48,44 @@ function HomePage() {
   async function remove(id: string) {
     const { error } = await supabase.from("documents").delete().eq("id", id);
     if (error) toast.error(error.message);
-    else { toast.success("Document supprimé"); void load(); }
+    else { toast.success(t("common.delete")); void load(); }
   }
 
   return (
-    <div className="px-5 pt-10 pb-32">
+    <div className="px-5 pt-8 pb-32">
+      {/* Top bar */}
+      <div className="mb-6 flex items-center justify-between gap-2">
+        <LanguageSwitcher compact />
+        <div className="flex items-center gap-1">
+          <Link to="/profile" aria-label="Profil" className="rounded-lg border border-border bg-card/50 p-2 text-muted-foreground hover:text-foreground">
+            <User className="h-4 w-4" />
+          </Link>
+          <Link to="/settings" aria-label="Paramètres" className="rounded-lg border border-border bg-card/50 p-2 text-muted-foreground hover:text-foreground">
+            <Settings className="h-4 w-4" />
+          </Link>
+          <Link to="/about" aria-label="À propos" className="rounded-lg border border-border bg-card/50 p-2 text-muted-foreground hover:text-foreground">
+            <Info className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+
       <header className="mb-8">
-        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Aurum System</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{t("home.kicker")}</p>
         <h1 className="mt-2 font-display text-4xl leading-tight">
-          De la <span className="gold-text">voix</span><br />au document.
+          {t("home.title_a")} <span className="gold-text">{t("home.title_b")}</span><br />{t("home.title_c")}
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Enregistrez, structurez et exportez vos rapports terrain en quelques secondes.
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">{t("home.subtitle")}</p>
       </header>
 
       {!online && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
           <CloudOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
           <div>
-            <p className="font-medium text-amber-300">Mode hors ligne activé</p>
-            <p className="mt-1 text-muted-foreground">Vos données seront synchronisées automatiquement dès le retour de la connexion.</p>
+            <p className="font-medium text-amber-300">{t("home.offline_title")}</p>
+            <p className="mt-1 text-muted-foreground">{t("home.offline_sub")}</p>
           </div>
         </div>
       )}
-
-
 
       <button
         onClick={() => navigate({ to: "/new" })}
@@ -78,9 +94,9 @@ function HomePage() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest opacity-70">
-              <Plus className="h-3.5 w-3.5" /> Nouveau
+              <Plus className="h-3.5 w-3.5" /> {t("home.new")}
             </div>
-            <div className="mt-1 font-display text-2xl">Créer un document</div>
+            <div className="mt-1 font-display text-2xl">{t("home.newDoc")}</div>
           </div>
           <Mic className="h-10 w-10 opacity-80" />
         </div>
@@ -90,8 +106,7 @@ function HomePage() {
 
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-lg">Documents récents</h2>
-
+          <h2 className="font-display text-lg">{t("home.recent")}</h2>
           {docs && <span className="text-xs text-muted-foreground">{docs.length}</span>}
         </div>
 
@@ -104,8 +119,8 @@ function HomePage() {
         {docs && docs.length === 0 && (
           <div className="glass-card rounded-2xl p-8 text-center">
             <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">Aucun document pour l'instant.</p>
-            <p className="text-xs text-muted-foreground">Créez votre premier rapport.</p>
+            <p className="mt-3 text-sm text-muted-foreground">{t("home.empty_title")}</p>
+            <p className="text-xs text-muted-foreground">{t("home.empty_sub")}</p>
           </div>
         )}
 
@@ -123,15 +138,16 @@ function HomePage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-gold-soft">
-                      {d.type === "rapport" ? "Rapport" : "PV"}
+                      {d.type === "rapport" ? t("doc.type_rapport") : t("doc.type_pv")}
                     </span>
                     {d.status === "draft" && (
-                      <span className="text-[10px] uppercase text-muted-foreground">Brouillon</span>
+                      <span className="text-[10px] uppercase text-muted-foreground">{t("home.draft")}</span>
                     )}
                   </div>
                   <div className="mt-0.5 truncate text-sm font-medium">{d.title}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {new Date(d.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    {new Date(d.created_at).toLocaleString(lang === "en" ? "en-GB" : "fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    {d.reference && <> · {d.reference}</>}
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -139,7 +155,7 @@ function HomePage() {
               <button
                 onClick={() => remove(d.id)}
                 className="px-3 py-3 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-                aria-label="Supprimer"
+                aria-label={t("common.delete")}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
