@@ -127,7 +127,7 @@ function RecordPage() {
     if (p.defaultLocation) setLocation(p.defaultLocation);
 
     if (typeof window === "undefined") return;
-    const secure = window.isSecureContext || location === "localhost";
+    const secure = window.isSecureContext || window.location.hostname === "localhost";
     setSecureOk(secure);
     const hasMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     const hasRec = typeof MediaRecorder !== "undefined";

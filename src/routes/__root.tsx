@@ -7,9 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { SyncStatus } from "@/components/SyncStatus";
 import { useSyncEngine } from "@/hooks/use-sync-engine";
+import { I18nProvider } from "@/i18n";
+import { applyTheme, getTheme } from "@/lib/profile-store";
 
 import appCss from "../styles.css?url";
 
@@ -92,15 +95,18 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useSyncEngine();
+  useEffect(() => { applyTheme(getTheme()); }, []);
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="mx-auto max-w-xl min-h-screen">
-        <div className="fixed top-3 right-3 z-50">
-          <SyncStatus />
+    <I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <div className="mx-auto max-w-xl min-h-screen">
+          <div className="fixed top-3 right-3 z-50">
+            <SyncStatus />
+          </div>
+          <Outlet />
         </div>
-        <Outlet />
-      </div>
-      <Toaster theme="dark" position="top-center" />
-    </QueryClientProvider>
+        <Toaster theme="dark" position="top-center" />
+      </QueryClientProvider>
+    </I18nProvider>
   );
 }

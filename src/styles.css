@@ -85,6 +85,38 @@
   --shadow-deep: 0 20px 60px -20px oklch(0 0 0 / 0.6);
 }
 
+:root.light {
+  /* AURUM — Light institutional */
+  --background: oklch(0.985 0.005 85);
+  --foreground: oklch(0.18 0.01 80);
+  --card: oklch(0.99 0.004 85);
+  --card-foreground: oklch(0.18 0.01 80);
+  --popover: oklch(0.99 0.004 85);
+  --popover-foreground: oklch(0.18 0.01 80);
+
+  --primary: oklch(0.62 0.13 75);
+  --primary-foreground: oklch(0.98 0.005 85);
+  --gold: oklch(0.62 0.13 75);
+  --gold-soft: oklch(0.55 0.12 70);
+
+  --secondary: oklch(0.94 0.01 85);
+  --secondary-foreground: oklch(0.20 0.01 80);
+  --muted: oklch(0.94 0.01 85);
+  --muted-foreground: oklch(0.45 0.02 80);
+  --accent: oklch(0.92 0.04 85);
+  --accent-foreground: oklch(0.20 0.01 80);
+  --destructive: oklch(0.55 0.22 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.88 0.01 85);
+  --input: oklch(0.94 0.01 85);
+  --ring: oklch(0.62 0.13 75);
+
+  --gradient-gold: linear-gradient(135deg, oklch(0.72 0.14 85), oklch(0.55 0.13 70));
+  --gradient-dark: radial-gradient(ellipse at top, oklch(0.95 0.02 85 / 0.7), oklch(0.985 0.005 85) 70%);
+  --shadow-gold: 0 10px 40px -10px oklch(0.62 0.13 75 / 0.35);
+  --shadow-deep: 0 20px 60px -20px oklch(0 0 0 / 0.15);
+}
+
 @layer base {
   * { border-color: var(--color-border); }
   html, body { background-color: var(--color-background); color: var(--color-foreground); }
