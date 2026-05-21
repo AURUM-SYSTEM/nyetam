@@ -16,12 +16,20 @@ export type Database = {
     Tables: {
       documents: {
         Row: {
+          agent_name: string
           conclusion: string
           created_at: string
           declarations: string
+          doc_date: string | null
+          doc_time: string | null
           faits: string
           id: string
           introduction: string
+          lang: string
+          location: string
+          observations: string
+          reference: string
+          signature_name: string
           status: string
           title: string
           transcript: string
@@ -29,12 +37,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agent_name?: string
           conclusion?: string
           created_at?: string
           declarations?: string
+          doc_date?: string | null
+          doc_time?: string | null
           faits?: string
           id?: string
           introduction?: string
+          lang?: string
+          location?: string
+          observations?: string
+          reference?: string
+          signature_name?: string
           status?: string
           title?: string
           transcript?: string
@@ -42,12 +58,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agent_name?: string
           conclusion?: string
           created_at?: string
           declarations?: string
+          doc_date?: string | null
+          doc_time?: string | null
           faits?: string
           id?: string
           introduction?: string
+          lang?: string
+          location?: string
+          observations?: string
+          reference?: string
+          signature_name?: string
           status?: string
           title?: string
           transcript?: string
