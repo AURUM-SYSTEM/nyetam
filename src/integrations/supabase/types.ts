@@ -35,6 +35,7 @@ export type Database = {
           transcript: string
           type: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           agent_name?: string
@@ -56,6 +57,7 @@ export type Database = {
           transcript?: string
           type: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           agent_name?: string
@@ -76,6 +78,40 @@ export type Database = {
           title?: string
           transcript?: string
           type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          country: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          preferred_lang: string
+          profession: string
+          updated_at: string
+        }
+        Insert: {
+          country?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          id: string
+          preferred_lang?: string
+          profession?: string
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          preferred_lang?: string
+          profession?: string
           updated_at?: string
         }
         Relationships: []
