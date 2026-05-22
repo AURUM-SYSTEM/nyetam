@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, FileText, Gavel, ChevronRight } from "lucide-react";
 import { useI18n } from "@/i18n";
 
-export const Route = createFileRoute("/new")({
+export const Route = createFileRoute("/_authenticated/new")({
   component: NewDocPage,
   head: () => ({ meta: [{ title: "Nouveau document — AURUM" }] }),
 });

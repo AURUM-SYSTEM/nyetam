@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { exportDocumentPdf } from "@/lib/pdf";
 import { useI18n } from "@/i18n";
 
-export const Route = createFileRoute("/document/$id")({
+export const Route = createFileRoute("/_authenticated/document/$id")({
   component: DocPage,
   head: () => ({ meta: [{ title: "Document — AURUM" }] }),
 });
