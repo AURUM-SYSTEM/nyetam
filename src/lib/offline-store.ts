@@ -1,7 +1,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 
 const DB_NAME = "aurum-offline";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export type QueueStatus =
   | "pending"
@@ -27,6 +27,8 @@ export type QueueMeta = {
   docTime?: string;
   signatureName?: string;
   lang?: "fr" | "en";
+  country?: string;
+  profession?: string;
 };
 
 export type QueueItem = {
@@ -39,6 +41,7 @@ export type QueueItem = {
   errorMsg?: string;
   title?: string;
   meta?: QueueMeta;
+  userId?: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -67,10 +70,7 @@ function getDB() {
 }
 
 function rid() {
-  return (
-    Date.now().toString(36) +
-    Math.random().toString(36).slice(2, 10)
-  );
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
 
 export async function saveAudio(blob: Blob, mimeType: string, durationMs: number) {
@@ -91,9 +91,7 @@ export async function deleteAudio(id: string) {
 }
 
 export async function enqueue(
-  item: Omit<QueueItem, "id" | "status" | "createdAt" | "updatedAt"> & {
-    status?: QueueStatus;
-  },
+  item: Omit<QueueItem, "id" | "status" | "createdAt" | "updatedAt"> & { status?: QueueStatus },
 ): Promise<QueueItem> {
   const db = await getDB();
   const now = Date.now();
@@ -143,9 +141,7 @@ export async function listPending(): Promise<QueueItem[]> {
 type Listener = () => void;
 const listeners = new Set<Listener>();
 function notify() {
-  listeners.forEach(l => {
-    try { l(); } catch {}
-  });
+  listeners.forEach(l => { try { l(); } catch {} });
 }
 export function subscribeQueue(l: Listener) {
   listeners.add(l);
@@ -158,10 +154,7 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(buf);
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode.apply(
-      null,
-      Array.from(bytes.subarray(i, i + chunk)) as any,
-    );
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
   }
   return btoa(binary);
 }

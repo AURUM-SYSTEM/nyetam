@@ -20,7 +20,30 @@
     "yes": "Oui",
     "no": "Non",
     "online": "En ligne",
-    "offline": "Hors ligne"
+    "offline": "Hors ligne",
+    "logout": "Déconnexion"
+  },
+  "auth": {
+    "signin_title": "Connexion",
+    "signin_sub": "Accédez à vos rapports et procès-verbaux.",
+    "signin_cta": "Se connecter",
+    "signup_title": "Créer un compte",
+    "signup_sub": "Quelques informations pour personnaliser vos rapports.",
+    "signup_cta": "Créer le compte",
+    "signed_in": "Connecté",
+    "account_created": "Compte créé",
+    "google": "Continuer avec Google",
+    "or": "ou",
+    "email": "Email",
+    "password": "Mot de passe",
+    "full_name": "Nom complet",
+    "country": "Pays",
+    "profession": "Fonction / métier",
+    "profession_ph": "Ex. Officier de police, Agent ONG, Médecin…",
+    "preferred_lang": "Langue préférée",
+    "no_account": "Pas encore de compte ?",
+    "have_account": "Déjà un compte ?",
+    "signed_out": "Déconnecté"
   },
   "home": {
     "kicker": "Aurum System",
@@ -97,12 +120,16 @@
   },
   "profile": {
     "title": "Profil utilisateur",
-    "sub": "Ces informations seront pré-remplies sur chaque nouveau document.",
+    "sub": "Vos informations personnalisent automatiquement vos rapports.",
     "name": "Nom complet",
     "role": "Fonction",
+    "country": "Pays",
+    "preferred_lang": "Langue préférée",
     "default_location": "Lieu par défaut",
     "signature": "Nom de signature",
-    "save": "Enregistrer le profil"
+    "save": "Enregistrer le profil",
+    "account": "Compte",
+    "logout": "Se déconnecter"
   },
   "settings": {
     "title": "Paramètres",

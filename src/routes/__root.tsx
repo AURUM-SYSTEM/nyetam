@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -11,8 +11,10 @@ import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { SyncStatus } from "@/components/SyncStatus";
 import { useSyncEngine } from "@/hooks/use-sync-engine";
-import { I18nProvider } from "@/i18n";
+import { I18nProvider, useI18n } from "@/i18n";
 import { applyTheme, getTheme } from "@/lib/profile-store";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 
@@ -22,10 +24,7 @@ function NotFoundComponent() {
       <div className="glass-card max-w-md rounded-2xl p-8 text-center">
         <h1 className="font-display text-6xl gold-text">404</h1>
         <p className="mt-3 text-sm text-muted-foreground">Cette page n'existe pas.</p>
-        <Link
-          to="/"
-          className="mt-6 inline-flex items-center justify-center rounded-lg btn-gold px-5 py-2.5 text-sm"
-        >
+        <Link to="/" className="mt-6 inline-flex items-center justify-center rounded-lg btn-gold px-5 py-2.5 text-sm">
           Retour à l'accueil
         </Link>
       </div>
@@ -41,10 +40,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       <div className="glass-card max-w-md rounded-2xl p-8 text-center">
         <h1 className="font-display text-2xl">Une erreur est survenue</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <button
-          onClick={() => { router.invalidate(); reset(); }}
-          className="mt-6 rounded-lg btn-gold px-5 py-2.5 text-sm"
-        >
+        <button onClick={() => { router.invalidate(); reset(); }} className="mt-6 rounded-lg btn-gold px-5 py-2.5 text-sm">
           Réessayer
         </button>
       </div>
@@ -92,6 +88,29 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AuthBridge({ children }: { children: React.ReactNode }) {
+  const { profile } = useAuth();
+  const { setLang } = useI18n();
+  const router = useRouter();
+  const qc = useQueryClient();
+
+  // Sync interface language with the user's preferred language on login
+  useEffect(() => {
+    if (profile?.preferred_lang) setLang(profile.preferred_lang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.preferred_lang]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      router.invalidate();
+      qc.invalidateQueries();
+    });
+    return () => subscription.unsubscribe();
+  }, [router, qc]);
+
+  return <>{children}</>;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useSyncEngine();
@@ -99,13 +118,17 @@ function RootComponent() {
   return (
     <I18nProvider>
       <QueryClientProvider client={queryClient}>
-        <div className="mx-auto max-w-xl min-h-screen">
-          <div className="fixed top-3 right-3 z-50">
-            <SyncStatus />
-          </div>
-          <Outlet />
-        </div>
-        <Toaster theme="dark" position="top-center" />
+        <AuthProvider>
+          <AuthBridge>
+            <div className="mx-auto max-w-xl min-h-screen">
+              <div className="fixed top-3 right-3 z-50">
+                <SyncStatus />
+              </div>
+              <Outlet />
+            </div>
+            <Toaster theme="dark" position="top-center" />
+          </AuthBridge>
+        </AuthProvider>
       </QueryClientProvider>
     </I18nProvider>
   );

@@ -16,10 +16,7 @@ async function callGatewayRaw(messages: GatewayMessage[], jsonMode = false) {
   if (!key) throw new Error("LOVABLE_API_KEY missing");
   const res = await fetch(GATEWAY, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model: MODEL,
       messages,
@@ -47,6 +44,48 @@ function audioFormatFromMime(mime: string): string {
 }
 
 const LangSchema = z.enum(["fr", "en"]).default("fr");
+
+// ---- Personalization helpers ----
+
+function detectStyle(country: string, profession: string): "fr_admin" | "en_incident" | "ngo_field" | "medical" | "default" {
+  const c = (country || "").toUpperCase();
+  const p = (profession || "").toLowerCase();
+  if (/(ong|ngo|humanit|terrain|field officer|volontaire)/.test(p)) return "ngo_field";
+  if (/(médecin|medecin|infirm|docteur|nurse|doctor|clinic|santé|health)/.test(p)) return "medical";
+  const francAdmin = ["CM","SN","CI","BJ","TG","BF","ML","GA","CD","CG","MA","TN","DZ","MG","HT","FR","BE","CH"];
+  const anglo = ["US","GB","IE","AU","NZ","NG","GH","KE","ZA","IN","CA"];
+  if (francAdmin.includes(c) && /(agent|police|gendarm|inspect|fonction|admin|huissier|sécurité|securite)/.test(p)) return "fr_admin";
+  if (francAdmin.includes(c)) return "fr_admin";
+  if (anglo.includes(c)) return "en_incident";
+  return "default";
+}
+
+function styleGuidance(style: ReturnType<typeof detectStyle>, lang: "fr" | "en"): string {
+  if (lang === "en") {
+    switch (style) {
+      case "en_incident":
+        return "Use a formal INCIDENT REPORT style: chronological facts, witness statements, severity, follow-up. Concise, precise, factual, third person.";
+      case "ngo_field":
+        return "Use an NGO FIELD REPORT style: context, beneficiaries, observed needs, actions, gaps, recommendations. Neutral humanitarian tone.";
+      case "medical":
+        return "Use a synthetic CLINICAL/FIELD HEALTH REPORT style: anamnesis, observations, parameters, recommendations. Discreet, factual, medical register.";
+      default:
+        return "Use a formal English administrative/professional report style. Concise and factual.";
+    }
+  }
+  switch (style) {
+    case "fr_admin":
+      return "Style PROCÈS-VERBAL / RAPPORT ADMINISTRATIF francophone (gendarmerie, police, fonction publique) : registre formel, soutenu, énumérations factuelles, neutralité, troisième personne. Aucun récit subjectif.";
+    case "ngo_field":
+      return "Style RAPPORT TERRAIN ONG : contexte, bénéficiaires, besoins observés, actions menées, lacunes, recommandations. Ton humanitaire neutre.";
+    case "medical":
+      return "Style RAPPORT CLINIQUE / SANTÉ DE TERRAIN synthétique : anamnèse, observations, paramètres, recommandations. Registre médical sobre.";
+    default:
+      return "Style administratif et professionnel français, formel, factuel et concis.";
+  }
+}
+
+// ---- Server functions ----
 
 export const transcribeAudio = createServerFn({ method: "POST" })
   .inputValidator((d: { audioBase64: string; mimeType: string; lang?: "fr" | "en" }) =>
@@ -86,34 +125,13 @@ type StructuredDoc = {
 };
 
 async function callGateway(messages: Array<{ role: string; content: string }>, jsonMode = false) {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const res = await fetch(GATEWAY, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
-    }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    if (res.status === 429) throw new Error("Limite de requêtes atteinte, réessayez dans un instant.");
-    if (res.status === 402) throw new Error("Crédits IA épuisés. Ajoutez des crédits dans Lovable.");
-    throw new Error(`Erreur IA (${res.status}): ${text.slice(0, 200)}`);
-  }
-  const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
-  return data.choices?.[0]?.message?.content ?? "";
+  return callGatewayRaw(messages, jsonMode);
 }
 
 async function cleanRawTranscript(raw: string, lang: "fr" | "en" = "fr"): Promise<string> {
   const sys = lang === "en"
-    ? "You clean raw audio transcriptions in English. STRICT rules: remove repetitions and hesitations (uh, um, well, like, etc.), fix broken or unfinished sentences, reformulate cleanly in a professional and formal style, BUT strictly keep the original meaning — invent NO information, do not summarize, do not shorten factual content. Return ONLY the cleaned text, no preamble, no quotes, no markdown."
-    : "Tu nettoies des transcriptions audio brutes en français. Règles STRICTES : supprime les répétitions et hésitations (euh, ben, du coup, voilà, etc.), corrige les phrases cassées ou inachevées, reformule proprement dans un style professionnel et formel, mais GARDE rigoureusement le sens original — n'invente AUCUNE information, ne résume pas, ne raccourcis pas le contenu factuel. Renvoie UNIQUEMENT le texte nettoyé, sans préambule, sans guillemets, sans markdown.";
+    ? "You clean raw audio transcriptions. Remove repetitions, duplicates and formulation errors (uh, um, well, etc.), fix broken or unfinished sentences, reformulate cleanly in a clear, professional and natural style, BUT strictly keep the original meaning — invent NO information. Return ONLY the cleaned text, no preamble, no quotes, no markdown."
+    : "Tu nettoies cette transcription audio. Supprime les répétitions, les doublons et les erreurs de formulation (euh, ben, du coup, voilà, etc.), corrige les phrases cassées ou inachevées, reformule proprement dans un style clair, professionnel et naturel, mais GARDE rigoureusement le sens original — n'invente AUCUNE information. Renvoie UNIQUEMENT le texte nettoyé, sans préambule, sans guillemets, sans markdown.";
   const cleaned = await callGateway([
     { role: "system", content: sys },
     { role: "user", content: raw },
@@ -129,56 +147,67 @@ export const cleanTranscript = createServerFn({ method: "POST" })
   .handler(async ({ data }) => ({ text: await cleanRawTranscript(data.text, data.lang ?? "fr") }));
 
 export const generateDocument = createServerFn({ method: "POST" })
-  .inputValidator((d: { transcript: string; type: "rapport" | "pv"; lang?: "fr" | "en" }) =>
+  .inputValidator((d: { transcript: string; type: "rapport" | "pv"; lang?: "fr" | "en"; country?: string; profession?: string }) =>
     z.object({
       transcript: z.string().min(1).max(50000),
       type: z.enum(["rapport", "pv"]),
       lang: LangSchema.optional(),
+      country: z.string().max(80).optional(),
+      profession: z.string().max(120).optional(),
     }).parse(d),
   )
   .handler(async ({ data }) => {
     const lang = data.lang ?? "fr";
+    const country = data.country ?? "";
+    const profession = data.profession ?? "";
     const cleanedTranscript = await cleanRawTranscript(data.transcript, lang);
+    const style = detectStyle(country, profession);
+    const guidance = styleGuidance(style, lang);
+
     const typeLabel = lang === "en"
       ? (data.type === "rapport" ? "REPORT" : "MINUTES")
       : (data.type === "rapport" ? "RAPPORT" : "PROCÈS-VERBAL");
 
+    const contextLine = lang === "en"
+      ? `Author context — Country: ${country || "n/a"}, Profession: ${profession || "n/a"}.`
+      : `Contexte de l'auteur — Pays : ${country || "n/c"}, Fonction : ${profession || "n/c"}.`;
+
     const system = lang === "en"
-      ? `You are a legal and administrative assistant specialized in producing official ${typeLabel} from field audio transcripts. Write in formal, precise, factual English. Style: administrative, professional, synthetic, clear, NON-narrative. Prefer concise sentences and bullet-style enumerations where helpful. Strictly structure the output. Respond STRICTLY in valid JSON.`
-      : `Tu es un assistant juridique et administratif spécialisé dans la rédaction de ${typeLabel}s officiels à partir de retranscriptions audio terrain. Tu rédiges en français formel, précis, factuel. Style : administratif, professionnel, synthétique, clair, NON-narratif. Privilégie les phrases concises et les énumérations à puces quand pertinent. Tu structures rigoureusement le contenu. Réponds STRICTEMENT en JSON valide.`;
+      ? `You are a legal and administrative assistant producing official ${typeLabel} documents from field audio transcripts. ${contextLine} ${guidance} Write in formal, precise, factual English. Strictly synthetic, NON-narrative. Structure rigorously. Respond STRICTLY in valid JSON.`
+      : `Tu es un assistant juridique et administratif spécialisé dans la rédaction de ${typeLabel}s officiels à partir de retranscriptions audio terrain. ${contextLine} ${guidance} Tu rédiges en français formel, précis, factuel. Style strictement synthétique, NON-narratif. Tu structures rigoureusement le contenu. Réponds STRICTEMENT en JSON valide.`;
 
     const user = lang === "en"
-      ? `Here is the raw transcription of a field recording. Produce a structured ${typeLabel}.
+      ? `Produce a structured ${typeLabel}.
 
 Return EXCLUSIVELY a JSON object with these keys:
 {
   "title": "Short descriptive title (max 80 chars)",
   "introduction": "CONTEXT: presumed date, location, parties involved, scope of the mission",
   "faits": "FACTS OBSERVED: chronological and objective enumeration of facts",
-  "declarations": "STATEMENTS COLLECTED: declarations made by the persons mentioned (paraphrased if needed)",
+  "declarations": "STATEMENTS COLLECTED: declarations made by the persons mentioned",
   "observations": "OBSERVATIONS: technical or operational remarks, anomalies, points requiring attention",
   "conclusion": "CONCLUSION: synthesis, findings and recommended follow-up"
 }
 
-Each section must be administrative in tone, NOT narrative. No markdown, no **bold**, plain text only. If information is missing, indicate it soberly.
+Plain text only, no markdown. If information is missing, indicate it soberly.
 
 TRANSCRIPTION:
 """
 ${cleanedTranscript}
 """`
-      : `Voici la retranscription brute d'un enregistrement terrain. Génère un ${typeLabel} structuré.
+      : `Génère un ${typeLabel} structuré.
 
 Retourne EXCLUSIVEMENT un objet JSON avec ces clés :
 {
   "title": "Titre court et descriptif (max 80 caractères)",
   "introduction": "CONTEXTE : date présumée, lieu, parties prenantes, objet de la mission",
   "faits": "FAITS CONSTATÉS : énumération chronologique et objective des faits",
-  "declarations": "DÉCLARATIONS RECUEILLIES : déclarations des personnes mentionnées (paraphrasées si nécessaire)",
+  "declarations": "DÉCLARATIONS RECUEILLIES : déclarations des personnes mentionnées",
   "observations": "OBSERVATIONS : remarques techniques ou opérationnelles, anomalies, points d'attention",
   "conclusion": "CONCLUSION : synthèse, constatations et suites recommandées"
 }
 
-Chaque section doit avoir un ton administratif, NON narratif. Pas de markdown, pas de **gras**, juste du texte brut. Si une information manque, indique-le sobrement.
+Texte brut uniquement, pas de markdown. Si une information manque, indique-le sobrement.
 
 RETRANSCRIPTION :
 """

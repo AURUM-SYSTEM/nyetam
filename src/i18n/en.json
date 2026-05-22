@@ -20,7 +20,30 @@
     "yes": "Yes",
     "no": "No",
     "online": "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "signin_title": "Sign in",
+    "signin_sub": "Access your reports and minutes.",
+    "signin_cta": "Sign in",
+    "signup_title": "Create account",
+    "signup_sub": "A few details to personalize your reports.",
+    "signup_cta": "Create account",
+    "signed_in": "Signed in",
+    "account_created": "Account created",
+    "google": "Continue with Google",
+    "or": "or",
+    "email": "Email",
+    "password": "Password",
+    "full_name": "Full name",
+    "country": "Country",
+    "profession": "Role / profession",
+    "profession_ph": "E.g. Police officer, NGO agent, Doctor…",
+    "preferred_lang": "Preferred language",
+    "no_account": "No account yet?",
+    "have_account": "Already have an account?",
+    "signed_out": "Signed out"
   },
   "home": {
     "kicker": "Aurum System",
@@ -97,12 +120,16 @@
   },
   "profile": {
     "title": "User profile",
-    "sub": "This info will pre-fill every new document.",
+    "sub": "Your info automatically personalizes your reports.",
     "name": "Full name",
     "role": "Role",
+    "country": "Country",
+    "preferred_lang": "Preferred language",
     "default_location": "Default location",
     "signature": "Signature name",
-    "save": "Save profile"
+    "save": "Save profile",
+    "account": "Account",
+    "logout": "Sign out"
   },
   "settings": {
     "title": "Settings",
