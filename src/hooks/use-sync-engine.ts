@@ -12,6 +12,7 @@ import {
 import { transcribeAudio, generateDocument } from "@/lib/aurum.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
+import { getCachedProfile } from "@/hooks/use-auth";
 
 export function useSyncEngine() {
   const transcribe = useServerFn(transcribeAudio);
@@ -23,8 +24,16 @@ export function useSyncEngine() {
 
     async function processOne(item: QueueItem) {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) throw new Error("Non authentifié");
+        const userId = item.userId ?? session.user.id;
+
+        const profile = getCachedProfile();
+        const lang = item.meta?.lang ?? profile?.preferred_lang ?? "fr";
+        const country = item.meta?.country ?? profile?.country ?? "";
+        const profession = item.meta?.profession ?? profile?.profession ?? "";
+
         let transcript = item.transcript ?? "";
-        const lang = item.meta?.lang ?? "fr";
 
         if (item.audioId && !transcript) {
           await updateQueueItem(item.id, { status: "transcribing" });
@@ -43,12 +52,13 @@ export function useSyncEngine() {
 
         await updateQueueItem(item.id, { status: "generating" });
         const result = await generate({
-          data: { transcript, type: item.type, lang },
+          data: { transcript, type: item.type, lang, country, profession },
         });
 
         const { data, error } = await supabase
           .from("documents")
           .insert({
+            user_id: userId,
             type: item.type,
             title: result.title,
             transcript: result.cleanedTranscript ?? transcript,
@@ -92,6 +102,8 @@ export function useSyncEngine() {
     async function runPass() {
       if (running.current) return;
       if (!navigator.onLine) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
       running.current = true;
       try {
         const pending = await listPending();

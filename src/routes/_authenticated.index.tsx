@@ -17,7 +17,7 @@ type DocRow = {
   reference: string | null;
 };
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   component: HomePage,
   head: () => ({
     meta: [

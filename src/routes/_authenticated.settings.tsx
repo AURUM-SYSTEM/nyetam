@@ -4,7 +4,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useI18n } from "@/i18n";
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
   head: () => ({ meta: [{ title: "Paramètres — AURUM" }] }),
 });

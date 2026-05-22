@@ -87,7 +87,7 @@ function pickMimeType(): string {
   return "";
 }
 
-export const Route = createFileRoute("/record/$type")({
+export const Route = createFileRoute("/_authenticated/record/$type")({
   component: RecordPage,
   head: () => ({ meta: [{ title: "Enregistrement — AURUM" }] }),
 });
