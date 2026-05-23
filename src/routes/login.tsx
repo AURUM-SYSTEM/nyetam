@@ -1,4 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useEffect, useState } from "react";
 import { Loader2, LogIn } from "lucide-react";
 import { toast } from "sonner";
@@ -7,8 +9,12 @@ import { lovable } from "@/integrations/lovable";
 import { useI18n } from "@/i18n";
 import { useAuth } from "@/hooks/use-auth";
 
+const loginSearchSchema = z.object({
+  redirect: fallback(z.string(), "/").default("/"),
+});
+
 export const Route = createFileRoute("/login")({
-  validateSearch: (s: Record<string, unknown>) => ({ redirect: (s.redirect as string) || "/" }),
+  validateSearch: zodValidator(loginSearchSchema),
   component: LoginPage,
   head: () => ({ meta: [{ title: "Connexion — AURUM SYSTEM" }] }),
 });
