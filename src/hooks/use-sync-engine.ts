@@ -1,5 +1,3 @@
-console.log("🔥 FILE UPDATED SUCCESSFULLY");
-
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
@@ -17,6 +15,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { getCachedProfile } from "@/hooks/use-auth";
 
 export function useSyncEngine() {
+  console.log("🔥 FILE UPDATED SUCCESSFULLY");
+
   const transcribe = useServerFn(transcribeAudio);
   const generate = useServerFn(generateDocument);
   const running = useRef(false);
@@ -282,4 +282,4 @@ export function useSyncEngine() {
       unsub();
     };
   }, [transcribe, generate]);
-                    }
+}
