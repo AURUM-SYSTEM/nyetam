@@ -1,4 +1,6 @@
-console.log("🔥 FILE UPDATED SUCCESSFULLY");iimport{ useEffect, useRef } from "react";
+console.log("🔥 FILE UPDATED SUCCESSFULLY");
+
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
   listPending,
@@ -29,15 +31,26 @@ export function useSyncEngine() {
         console.log("HAS AUDIO =", !!item.audioId);
         console.log("HAS TRANSCRIPT =", !!item.transcript);
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) throw new Error("Non authentifié");
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+          throw new Error("Non authentifié");
+        }
 
         const userId = item.userId ?? session.user.id;
 
         const profile = getCachedProfile();
-        const lang = item.meta?.lang ?? profile?.preferred_lang ?? "fr";
-        const country = item.meta?.country ?? profile?.country ?? "";
-        const profession = item.meta?.profession ?? profile?.profession ?? "";
+
+        const lang =
+          item.meta?.lang ?? profile?.preferred_lang ?? "fr";
+
+        const country =
+          item.meta?.country ?? profile?.country ?? "";
+
+        const profession =
+          item.meta?.profession ?? profile?.profession ?? "";
 
         let transcript = item.transcript ?? "";
 
@@ -45,25 +58,39 @@ export function useSyncEngine() {
         if (item.audioId && !transcript) {
           console.log("🎙️ START TRANSCRIPTION");
 
-          await updateQueueItem(item.id, { status: "transcribing" });
+          await updateQueueItem(item.id, {
+            status: "transcribing",
+          });
 
           const audio = await getAudio(item.audioId);
-          if (!audio) throw new Error("Audio introuvable");
+
+          if (!audio) {
+            throw new Error("Audio introuvable");
+          }
 
           const audioBase64 = await blobToBase64(audio.blob);
 
           const t = await transcribe({
-            data: { audioBase64, mimeType: audio.mimeType, lang },
+            data: {
+              audioBase64,
+              mimeType: audio.mimeType,
+              lang,
+            },
           });
+
+          console.log("🧪 TRANSCRIBE RESPONSE =", t);
 
           if (!t || !t.text) {
             throw new Error("Transcription invalide ou vide");
           }
 
           transcript = t.text;
+
           console.log("📝 TRANSCRIPTION OK", transcript);
 
-          await updateQueueItem(item.id, { transcript });
+          await updateQueueItem(item.id, {
+            transcript,
+          });
         }
 
         if (!transcript.trim()) {
@@ -73,7 +100,9 @@ export function useSyncEngine() {
         // 🔥 GENERATION
         console.log("⚙️ START GENERATION");
 
-        await updateQueueItem(item.id, { status: "generating" });
+        await updateQueueItem(item.id, {
+          status: "generating",
+        });
 
         const result = await generate({
           data: {
@@ -85,20 +114,23 @@ export function useSyncEngine() {
           },
         });
 
+        console.log("🧪 GENERATE RESPONSE =", result);
+
         if (!result || !result.title) {
           throw new Error("Génération invalide");
         }
 
         console.log("📄 GENERATION OK", result.title);
 
-        // 🔥 SUPABASE
+        // 🔥 SUPABASE INSERT
         const { data, error } = await supabase
           .from("documents")
           .insert({
             user_id: userId,
             type: item.type,
             title: result.title ?? "Sans titre",
-            transcript: result.cleanedTranscript ?? transcript,
+            transcript:
+              result.cleanedTranscript ?? transcript,
             introduction: result.introduction ?? "",
             faits: result.faits ?? "",
             declarations: result.declarations ?? "",
@@ -108,7 +140,10 @@ export function useSyncEngine() {
             agent_name: item.meta?.agentName ?? "",
             location: item.meta?.location ?? "",
             reference: item.meta?.reference ?? "",
-            signature_name: item.meta?.signatureName ?? "",
+            signature_name:
+              item.meta?.signatureName ??
+              item.meta?.agentName ??
+              "",
             doc_date: item.meta?.docDate ?? null,
             doc_time: item.meta?.docTime ?? null,
             lang,
@@ -117,7 +152,7 @@ export function useSyncEngine() {
           .single();
 
         if (error) {
-          console.error("❌ SUPABASE ERROR", error);
+          console.error("❌ SUPABASE ERROR =", error);
           throw error;
         }
 
@@ -133,12 +168,14 @@ export function useSyncEngine() {
         if (item.audioId) {
           try {
             await deleteAudio(item.audioId);
-          } catch {}
+          } catch (err) {
+            console.warn("⚠️ DELETE AUDIO FAILED", err);
+          }
         }
 
         toast.success(`Synchronisé : ${result.title}`);
       } catch (e: any) {
-        console.error("❌ ITEM FAILED", e);
+        console.error("❌ ITEM FAILED =", e);
 
         await updateQueueItem(item.id, {
           status: "error",
@@ -150,11 +187,24 @@ export function useSyncEngine() {
     }
 
     async function runPass() {
-      if (running.current) return;
-      if (!navigator.onLine) return;
+      if (running.current) {
+        console.log("⏳ ENGINE ALREADY RUNNING");
+        return;
+      }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!navigator.onLine) {
+        console.log("📴 OFFLINE MODE");
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.log("🔒 NO SESSION");
+        return;
+      }
 
       running.current = true;
 
@@ -166,11 +216,20 @@ export function useSyncEngine() {
         console.log("📦 QUEUE LENGTH =", pending.length);
 
         const toProcess = pending.filter(
-          i =>
+          (i) =>
             i.status === "pending" ||
             i.status === "uploading" ||
             i.status === "transcribing" ||
             i.status === "generating"
+        );
+
+        console.log(
+          "📋 TO PROCESS =",
+          toProcess.map((i) => ({
+            id: i.id,
+            status: i.status,
+            type: i.type,
+          }))
         );
 
         for (const item of toProcess) {
@@ -181,29 +240,46 @@ export function useSyncEngine() {
 
           try {
             await processOne(item);
-          } catch (e) {
-            console.error("❌ CONTINUING AFTER ERROR", e);
+          } catch (err) {
+            console.error(
+              "❌ CONTINUING AFTER ERROR",
+              err
+            );
           }
         }
+      } catch (err) {
+        console.error("❌ RUNPASS FAILED =", err);
       } finally {
         running.current = false;
       }
     }
 
-    const onOnline = () => void runPass();
+    const onOnline = () => {
+      console.log("🌐 BACK ONLINE");
+      void runPass();
+    };
+
     window.addEventListener("online", onOnline);
 
-    const interval = setInterval(() => void runPass(), 30000);
+    const interval = setInterval(() => {
+      void runPass();
+    }, 30000);
 
-    const unsub = subscribeQueue(() => void runPass());
+    const unsub = subscribeQueue(() => {
+      console.log("📨 QUEUE UPDATED");
+      void runPass();
+    });
 
     void runPass();
 
     return () => {
       cancelled = true;
+
       window.removeEventListener("online", onOnline);
+
       clearInterval(interval);
+
       unsub();
     };
   }, [transcribe, generate]);
-          }
+                    }
