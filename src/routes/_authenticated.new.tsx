@@ -12,8 +12,11 @@ function NewDocPage() {
   const { t } = useI18n();
 
   function pick(type: "rapport" | "pv") {
-    navigate({ to: "/record/$type", params: { type } });
-  }
+  navigate({
+    to: "/_authenticated/record/$type",
+    params: { type },
+  });
+}
 
   return (
     <div className="px-5 pt-8 pb-32">
