@@ -60,7 +60,7 @@ const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedRecordTypeRoute = AuthenticatedRecordTypeRouteImport.update({
-  id: '/record/$type',
+  id: '/_authenticated/record/$type',
   path: '/record/$type',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
