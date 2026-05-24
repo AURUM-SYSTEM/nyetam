@@ -13,7 +13,7 @@ function NewDocPage() {
 
   function pick(type: "rapport" | "pv") {
   navigate({
-    to: "/_authenticated/record/$type",
+    to: "/record/$type",
     params: { type },
   });
 }
