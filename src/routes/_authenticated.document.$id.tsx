@@ -32,7 +32,7 @@ type Doc = {
 };
 
 function DocPage() {
-  const { id } = useParams({ from: "/document/$id" });
+  const { id } = useParams({ from: "/_authenticated/document/$id" });
   const navigate = useNavigate();
   const { t } = useI18n();
   const [doc, setDoc] = useState<Doc | null>(null);
