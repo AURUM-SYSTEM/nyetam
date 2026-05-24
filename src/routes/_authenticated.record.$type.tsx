@@ -93,7 +93,7 @@ export const Route = createFileRoute("/_authenticated/record/$type")({
 });
 
 function RecordPage() {
-  const { type } = useParams({ from: "/record/$type" });
+  const { type } = useParams({ from: "/_authenticated/record/$type" });
   const docType = (type === "pv" ? "pv" : "rapport") as "rapport" | "pv";
   const navigate = useNavigate();
   const online = useOnline();
